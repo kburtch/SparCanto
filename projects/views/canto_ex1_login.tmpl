@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+<head>
+<title>Test page</title>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
+<link rel="stylesheet" type="text/css" href="<?spar put( "/cgi-bin/adagio_ex1_login.cgi" ); ?>">
+</head>
+<body>
+<p>This is the template.</p>
+
+<?spar ? "A test"; ?>
+<?spar btree_io.flush( cms_file ); ?>
+<?spar ? cms_static_content( "ken" ); ?>
+<?spar ? "done"; ?>
+<?spar cms_close; ?>
+</body>
+</html>
+
