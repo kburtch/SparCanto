@@ -9,7 +9,7 @@ pragma restriction( no_external_commands );
 pragma software_model( shell_script );
 pragma license( gplv3 );
 
-procedure snippet_list is
+procedure content_list is
   with separate "../config/config.sp";
   with separate "../framework/sparcanto.sp";
   key : string;
@@ -18,8 +18,7 @@ begin
   cd( project_path & "/bin/" );
 
   pragma annotate( todo, "not yet written" );
-
-end snippet_list;
+end content_list;
 
 -- VIM editor formatting instructions
 -- vim: ft=spar

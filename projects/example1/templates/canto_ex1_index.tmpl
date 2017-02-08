@@ -1,0 +1,20 @@
+<!doctype html>
+<html>
+<head>
+<title>Index Page - SparCanto Example 1</title>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
+<link rel="stylesheet" type="text/css" href="<?spar put( files.dirname( string( REQUEST_URI ) ) & "/css.sp" ); ?>">
+</head>
+<body>
+<h1 class="canto_white">Example 1</h1>
+<h2 class="canto_white">Index Page</h2>
+<p class="canto_white">Welcome to the SparCanto Example 1 index page.</p>
+<p class="canto_white">Click the Login button to continue.</p>
+<!-- TODO : make dynamic -->
+<p><a href="<?spar put( files.dirname( string( REQUEST_URI ) ) & "/login.sp" ); ?>"><button type="button">Login</button></a></p>
+<?spar canto_close; ?>
+</body>
+</html>
+

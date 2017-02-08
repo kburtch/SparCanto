@@ -1,6 +1,6 @@
 #!/usr/local/bin/spar
 procedure canto_ex1_login is
-  pragma template( html, "views/canto_ex1_login.tmpl" );
+  pragma template( text, "views/canto_ex1_login.tmpl" );
   with separate "../config/config.sp";
   with separate "../framework/sparcanto.sp";
 begin
@@ -8,7 +8,7 @@ begin
   cms_open;
   cms_save_static_content( "ken", "hello & ken" );
   --cms_put_static_content( "ken" );
-  --cms_close;
+  cms_close;
 end canto_ex1_login;
 
 -- VIM editor formatting instructions

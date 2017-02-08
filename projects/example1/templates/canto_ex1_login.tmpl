@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+<head>
+<title>Login Page - SparCanto Example 1</title>
+<meta charset="UTF-8">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
+<link rel="stylesheet" type="text/css" href="<?spar put( files.dirname( string( REQUEST_URI ) ) & "/css.sp" ); ?>">
+</head>
+<body>
+
+<h1 class="canto_white">Example 1</h1>
+<h2 class="canto_white">Login Page</h2>
+
+<form method="POST" ACTION="<?spar put( REQUEST_URI ); ?>">
+<p>Username: <input name="username" type="input" value="<?spar put( username ); ?>"></p>
+<p>Password: <input name="password" type="password" value="<?spar put( password ); ?>"></p>
+<?spar
+  if error_message /= "" then
+     -- TODO: escape error message
+     ? "<p>" & error_message & "</p>";
+  end if;
+?>
+<p><input name="submit" type="submit" value="Submit"></p>
+</form>
+<?spar canto_close; ?>
+</body>
+</html>
+

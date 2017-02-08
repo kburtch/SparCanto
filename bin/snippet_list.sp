@@ -3,7 +3,9 @@
 pragma annotate( summary, "snippet_list" )
               @( description, "List the available snippets." )
               @( author, "Ken O. Burtch" );
-pragma restrictions( no_external_commands );
+pragma restriction( no_external_commands );
+pragma software_model( shell_script );
+pragma license( gplv3 );
 
 procedure snippet_list is
   with separate "../config/config.sp";
@@ -23,19 +25,19 @@ procedure snippet_list is
 begin
   btree_io.new_cursor( snippet_cursor, a_snippet );
   cd( project_path & "/bin/" );
-  cms_open;
-  btree_io.open_cursor( cms_snippet_file, snippet_cursor );
-  btree_io.get_first( cms_snippet_file, snippet_cursor, key, snippet );
+  canto_open;
+  btree_io.open_cursor( canto_snippet_file, snippet_cursor );
+  btree_io.get_first( canto_snippet_file, snippet_cursor, key, snippet );
   print_it( snippet );
-  btree_io.raise_exceptions( cms_snippet_file, false );
+  btree_io.raise_exceptions( canto_snippet_file, false );
   loop
-     btree_io.get_next( cms_snippet_file, snippet_cursor, key, snippet );
-     exit when btree_io.last_error( cms_snippet_file ) = bdb.DB_NOTFOUND;
+     btree_io.get_next( canto_snippet_file, snippet_cursor, key, snippet );
+     exit when btree_io.last_error( canto_snippet_file ) = bdb.DB_NOTFOUND;
      print_it( snippet );
   end loop;
-  btree_io.raise_exceptions( cms_snippet_file, true );
-  btree_io.close_cursor( cms_snippet_file, snippet_cursor );
-  cms_close;
+  btree_io.raise_exceptions( canto_snippet_file, true );
+  btree_io.close_cursor( canto_snippet_file, snippet_cursor );
+  canto_close;
 end snippet_list;
 
 -- VIM editor formatting instructions

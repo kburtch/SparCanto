@@ -12,71 +12,6 @@ pragma annotate( summary, "SparAdagio" )
 pragma restriction( no_external_commands );
 pragma assert( System.System_Version >= "2.0.1" );
 
--- Alternative names:
---  MastheadMouse,MarinerMouse,marinamouse,Mainstaymouse,Midshipmouse,
---  MizzenMouse
---  spar berth -- 2 sailing words together no good
---
-
---  sprightforte -     0 hits - agile, but can people spell it?
---  sparworkaway -     1 hits - too long?
--- *sparlegro   -      2 hits
---  spargunplay -      2 hits
---  sparhorseplay -    2 hits - too long?
---  sparstingray -     2 hits - too long?
---  sparcastaway -     4 hits - too long?
---  sparsprightly -    4 hits - can people spell it? too long?
---  sparbriskly -      4 hits
---  sparricochet -     5 hits - too long?
--- *sparforay   -      6 hits - too similar to sparforte?
---  sparadagio  -      8 hits
---  sparheadway -      8 hits
---  skiffforte  -      8 hits
---  sparinterplay -   21 hits - too long?
---**sparcanto   -     24 hits
---  sparforestay -    34 hits - too long?
---  sparattache -     35 hits
---  spryforte  -      42 hits
---  sparforza   -     45 hits ("forza = very forte" in music)
---  sparsensei  -    237 hits
---  spartouche  -    267 hits, french
--- *sailforte   -    300 similar to salesforce
--- *sparsoar    -    321
---  craftforte  -    800, taken
---  spardolce   -    833
---  spardante   -  1 000
---  sparmarina  -  1 100 hits (spar marine taken)
--- ?swiftforte  -  1 400 hits
---  spartissimo -  3 000, taken
--- *ironforte   -  3 700, taken - medication
---  sureforte   -  4 200
---  sparsmart   -  4 200, boxing sites
--- *fastforte   -  5 000, taken - gym
---  sparfresh   -  5 700, taken, brand name
---  spararia    - 15 000
---  sparwing    - 16,500 - aircraft wing
---  ironspar    - 18 000 - a mineral
---  rockforte   - 18 600, taken
---  litheforte  - 27 000, similar to life forte
---  MarinaArena - 34 000, taken, writer
---  spartly     - 36 000, taken
---  rigging cms = 350 000 hits
---  knotforte   - 800
---  mizzenforte - 52 000 this
---  knot cms    - 450 000 hits
---  stoneforte  - 570 000 hits, too close to stone fort
---  berth cms   = 1.5 million hits
---  marinaforte - 2 million
---  spar cms    = 2 million hits
---  sparfortress = 1.2 million hits, similar to B-29 Superfortress
---  fort cms    = 11 million hits
-  --  too many hits on cms (common letters)
---  sparworks - taken
---  fortecms - taken
---  spartempo - taken
---  spargrande - taken
---  sparmezzo -
-
 -----------------------------------------------------------------------------
 -- Data Types
 --
@@ -89,7 +24,21 @@ type raw_content  is new string;
 type csrf_token   is new string;
 --type session_string is new string;
 type session_string is new string;
-type cgi_string is new string;
+type cookie_string is new string;
+type user_id      is new integer;
+
+
+type a_content_entry is record
+  id           : html_id;       -- html id where it goes
+  content      : raw_content;   -- the raw content
+  tags         : raw_content;   -- content tags
+  description  : raw_content;   -- comments on content
+  owner        : user_id;       -- who owns it
+  created_on   : calendar.time; -- when was it created
+  published_on : calendar.time; -- when it should appear
+  expired_on   : calendar.time; -- when it is obsolete
+  can_cache    : boolean;       -- can it be cached
+end record;
 
 type snippet_id is new string;
 
@@ -108,7 +57,7 @@ end record;
 --
 -----------------------------------------------------------------------------
 
-cms_version : constant universal_string := "0.1";
+canto_version : constant universal_string := "0.1";
 
 
 -----------------------------------------------------------------------------
@@ -123,8 +72,9 @@ cms_version : constant universal_string := "0.1";
 -- drwxrwx--- 2 root www-data 4096 Jan  6 20:27 ../skiffmouse/
 
 pragma annotate( todo, "Need content in a database" );
+pragma annotate( todo, "Cleanup of content file, subprograms" );
 
-type cms_file_type is (btree,local,memcache);
+type canto_file_type is (btree,local,memcache);
 
 --cms_dir  : constant string := "/usr/lib/skiffmouse";
 --cms_path : constant string := "/usr/lib/skiffmouse/cms_content.btree";
@@ -137,13 +87,13 @@ mc_session : memcache.memcache_cluster;
 session_max_key_length : constant positive := 80;
 session_max_content_length : constant positive := 2048;
 
-cms_file : btree_io.file;
+canto_content_file : btree_io.file;
 
 --cms_snippet_path : string := "/usr/lib/skiffmouse/cms_snippet.btree";
-cms_snippet_file : btree_io.file;
+canto_snippet_file : btree_io.file;
 
-CMS_KEY_ERROR : exception;
-CMS_ID_ERROR  : exception;
+CANTO_KEY_ERROR : exception;
+CANTO_ID_ERROR  : exception;
 SESSION_KEY_ERROR : exception;
 CONFIG_ERROR : exception;
 
@@ -159,44 +109,46 @@ end_page_list   : doubly_linked_lists.list;
 session_openned : boolean := false;
 
 -----------------------------------------------------------------------------
+-- Cookies
+-----------------------------------------------------------------------------
 
-session_token : cgi_string;
-pragma unchecked_import( cgi, session_token );
+session_token : cookie_string;
 
 -- KLUDGE: this is here because of a bug in new_file, new_list, new_table
 
-procedure cms_initialize_generics is
+procedure canto_initialize_generics is
 begin
-  btree_io.new_file( cms_file, raw_content );
-  btree_io.new_file( cms_snippet_file, a_snippet );
+  btree_io.new_file( canto_content_file, a_content_entry );
+  btree_io.new_file( canto_snippet_file, a_snippet );
 
   doubly_linked_lists.new_list( begin_page_list, raw_content );
   doubly_linked_lists.new_list( end_page_list, raw_content );
 
   dynamic_hash_tables.new_table( id_table, html_id );
-end cms_initialize_generics;
+end canto_initialize_generics;
 
 
 -----------------------------------------------------------------------------
 
 -- Low-level content functions
 
-procedure cms_get( key : string; content : in out raw_content ) is
+procedure canto_get( key : string; content : in out a_content_entry ) is
+  ce : a_content_entry;
 begin
-   btree_io.get( cms_file, key, content );
-end cms_get;
+   btree_io.get( canto_content_file, key, ce );
+end canto_get;
 
-procedure cms_set( key : string; content : raw_content ) is
+procedure canto_set( key : string; content : in out a_content_entry ) is
 begin
    if key = "" then
-      raise CMS_KEY_ERROR with "empty key";
-   elsif strings.length( key ) > cms_max_key_length then
-      raise CMS_KEY_ERROR with "key too long";
+      raise CANTO_KEY_ERROR with "empty key";
+   elsif strings.length( key ) > canto_max_key_length then
+      raise CANTO_KEY_ERROR with "key too long";
    elsif not strings.is_alphanumeric( key ) then
-      raise CMS_KEY_ERROR with "key is not alphanumeric";
+      raise CANTO_KEY_ERROR with "key is not alphanumeric";
    end if;
-   btree_io.set( cms_file, key, content );
-end cms_set;
+   btree_io.set( canto_content_file, key, content );
+end canto_set;
 
 -- Session import/export functions
 --
@@ -208,69 +160,143 @@ end cms_set;
 --       it is only checked at syntax checking time.
 kludge_session : session_string;
 
+
+-- SESSION_OPEN
+--
+-- Create a new session token (if necessary) and open the session cache.
+-- Store the session token in a cookie.  This is called by the session import
+-- handler.  It assumes the session has not yet been openned.
+------------------------------------------------------------------------------
+
 procedure session_open is
   s : string;
 begin
+
+  -- Get the session token (or create a new one)
+
+  if session_token = "" then
+     if cgi.cookie_count > 0 then
+        session_token := cookie_string( cgi.cookie_value( "canto_session_token", 1 ) );
+     end if;
+  end if;
+  if session_token = "" then
+       session_token := cookie_string( numerics.md5( strings.image( numerics.rnd( 100000000 ) ) ) );
+       cgi.set_cookie( "canto_session_token", string( session_token ) );
+  end if;
+
+  -- Open the session cache where session data is stored.
+  --
+  -- Since this is run automatically, I chose not to raise a config error
+  -- here...not sure when the exception would be triggered.
+
   mc_session := memcache.new_cluster;
   memcache.register_server( mc_session, "localhost", 11211 );
-  -- no version? then not open
-  -- TODO: should I raise a CONFIG_ERROR here?
   s := memcache.version( mc_session );
   session_openned := s /= "";
+put_line( standard_error, "------------------------------------------------------" ); -- DEBUG
 end session_open;
 
-procedure cms_session_get( key : string; val : in out session_string ) is
+
+-- CANTO SESSION GET
+--
+-- Get a value from the user's session.  Opens the session if not already
+-- open.  This is the session variable import handler.
+------------------------------------------------------------------------------
+
+procedure canto_session_get( key : string; val : in out session_string ) is
   full_key : string;
+val2 : string; -- DEBUG
 begin
   if not session_openned then
      session_open;
   end if;
+  put_line( standard_error, "Getting " & key ); -- DEBUG
+  if session_openned then
+     put_line( standard_error, "Session is open" ); -- DEBUG
+  end if;
   full_key := string( session_token );
-  full_key := @ & "~";
+  full_key := @ & "__";
   full_key := @ & string( key );
   val := session_string( memcache.get( mc_session, full_key ) );
-end cms_session_get;
+put_line( standard_error, "GET: '" & full_key & "' = '" & val & "'" ); -- DEBUG
+val2 := memcache.version( mc_session );
+put_line( standard_error, "Checking memcache: '" & val2 & "'" );
+end canto_session_get;
 
 pragma session_import_script(
-   `kludge_session := session_string( sessions.session_variable_value ); cms_session_get( sessions.session_variable_name, kludge_session );`
+   `kludge_session := session_string( sessions.session_variable_value ); canto_session_get( sessions.session_variable_name, kludge_session );`
 );
 
-procedure cms_session_set( key : string; val : session_string ) is
+
+-- CANTO SESSION SET
+--
+-- Write a value to the user's session.  This is the session variable export
+-- handler.
+------------------------------------------------------------------------------
+
+procedure canto_session_set( key : string; val : session_string ) is
   full_key : string;
+
+val2 : string; -- DEBUG
 begin
+  if not session_openned then
+     session_open;
+  end if;
    if key = "" then
-      raise SESSION_KEY_ERROR with "empty key";
-   elsif strings.length( key ) > session_max_key_length then
-      raise SESSION_KEY_ERROR with "key too long";
-   elsif not strings.is_alphanumeric( key ) then
-      raise SESSION_KEY_ERROR with "key is not alphanumeric";
+      put_line( standard_error, source_info.source_location & ": key '" & key & "' is empty" );
+      return;
    end if;
    full_key := string( session_token );
-   full_key := @ & "~";
+   full_key := @ & "__";
    full_key := @ & string( key );
-   memcache.set( mc_session, full_key, string( val ) );
-end cms_session_set;
+   if strings.length( full_key ) > session_max_key_length then
+      put_line( standard_error, source_info.source_location & ": key '" & full_key & "' is too long" );
+      return;
+   elsif not memcache.is_valid_memcache_key( full_key ) then
+      put_line( standard_error, source_info.source_location & ": key '" & full_key & "' has invalid characters" );
+      return;
+   end if;
+  val2 := memcache.version( mc_session );
+put_line( standard_error, "SET: Checking memcache: '" & val2 & "'" );
+put_line( standard_error, "SET: '" & full_key & "' = '" & val & "'" ); -- DEBUG
+   begin
+     memcache.set( mc_session, full_key, string( val ) );
+   exception when others =>
+put_line( standard_error, exceptions.exception_info ); -- DEBUG
+   end;
+  val2 := memcache.version( mc_session );
+put_line( standard_error, "GET CONFIRM (BEFORE): Checking memcache: '" & val2 & "'" );
+put_line( standard_error, "GET CONFIRM..." );
+   begin
+     val2 := memcache.get( mc_session, full_key );
+put_line( standard_error, "GET CONFIRM: '" & full_key & "' = '" & val2 & "'" ); -- DEBUG
+   exception when others =>
+put_line( standard_error, exceptions.exception_info ); -- DEBUG
+   end;
+  val2 := memcache.version( mc_session );
+put_line( standard_error, "GET CONFIRM (AFTER): Checking memcache: '" & val2 & "'" );
+end canto_session_set;
 
 pragma session_export_script(
-   `cms_session_set( sessions.session_variable_name, sessions.session_variable_value );`
+   `kludge_session := session_string( sessions.session_variable_value ); canto_session_set( sessions.session_variable_name, kludge_session );`
 );
 
 -----------------------------------------------------------------------------
 -- HTML ID's
 -----------------------------------------------------------------------------
 
-function cms_new_id( prefix : string ) return html_id is
+function canto_new_id( prefix : string ) return html_id is
    the_id : html_id;
 begin
    the_id := html_id( strings.image( numerics.serial ) );
    the_id := html_id( strings.trim( @, trim_end.both ) );
    the_id := html_id( prefix ) & @;
    if dynamic_hash_tables.has_element( id_table, the_id ) then
-      raise CMS_ID_ERROR with "duplicate HTML id";
+      raise CANTO_ID_ERROR with "duplicate HTML id";
    end if;
    dynamic_hash_tables.add( id_table, the_id, the_id );
    return the_id;
-end cms_new_id;
+end canto_new_id;
 
 -----------------------------------------------------------------------------
 -- Static Content
@@ -279,22 +305,24 @@ end cms_new_id;
 -- are pulled from a cache or database.
 -----------------------------------------------------------------------------
 
-procedure cms_save_static_content( id : html_id; content : raw_content ) is
+procedure canto_save_static_content( id : html_id; content : in out a_content_entry ) is
 begin
-   cms_set( string( id ), content );
-end cms_save_static_content;
+   canto_set( string( id ), content );
+end canto_save_static_content;
 
-function cms_static_content( id : html_id ) return html_content is
-  content : raw_content;
+function canto_static_content( id : html_id ) return html_content is
+  ce : a_content_entry;
 begin
-   cms_get( string( id ), content );
-   return cgi.html_encode( content );
-end cms_static_content;
+   canto_get( string( id ), ce );
+   return cgi.html_encode( ce.content );
+end canto_static_content;
 
-procedure cms_put_static_content( id : html_id ) is
+procedure canto_put_static_content( id : html_id ) is
+  content : html_content;
 begin
-   put_line( cms_static_content( id ) );
-end cms_put_static_content;
+   content := canto_static_content( id );
+   put_line( content );
+end canto_put_static_content;
 
 -----------------------------------------------------------------------------
 -- Snippets
@@ -312,23 +340,23 @@ end cms_put_static_content;
 -- analogous to <?spar some_fn ?>??.
 -----------------------------------------------------------------------------
 
-procedure cms_with_snippet( id : snippet_id ) is
+procedure canto_with_snippet( id : snippet_id ) is
 --Registering a snippet at the top of page
 begin
   null;
-end cms_with_snippet;
+end canto_with_snippet;
 
-procedure cms_begin_snippet( id : snippet_id ) is
+procedure canto_begin_snippet( id : snippet_id ) is
 -- Insert the start of the snippet
 begin
   null;
-end cms_begin_snippet;
+end canto_begin_snippet;
 
-procedure cms_end_snippet( id : snippet_id ) is
+procedure canto_end_snippet( id : snippet_id ) is
 -- Insert the end of the snippet
 begin
   null;
-end cms_end_snippet;
+end canto_end_snippet;
 
 -----------------------------------------------------------------------------
 -- Layouts
@@ -402,10 +430,10 @@ end end_page;
 -- The MD5 is only to make the number human-readable...needed?
 -----------------------------------------------------------------------------
 
-function cms_csrf_token return csrf_token is
+function canto_csrf_token return csrf_token is
 begin
   return numerics.md5( strings.image( numerics.rnd( 100000000 ) ) );
-end cms_csrf_token;
+end canto_csrf_token;
 
 
 -----------------------------------------------------------------------------
@@ -417,25 +445,17 @@ end cms_csrf_token;
 -- TODO: handling logins
 -- TODO: we may have to generate this earlier
 -- TODO: should be begin_form or something like that
--- TODO: ideally session token should be in cookie
-
-procedure cms_put_session_token is
-begin
-  if session_token = "" then
-     session_token := cgi_string( numerics.md5( strings.image( numerics.rnd( 100000000 ) ) ) );
-  end if;
-  put_line( "<input name=" & ASCII.Quotation & "session_token" & ASCII.Quotation &
-    " type=" & ASCII.Quotation & "hidden" & ASCII.Quotation &
-     " value=" & ASCII.Quotation & session_token & ASCII.Quotation & ">" );
-end cms_put_session_token;
-
+--
 -- TODO: logins, multiple sessions
-
--- Session Variables
+-----------------------------------------------------------------------------
 
 login_name : constant session_string := "";
 pragma import( session, login_name );
+pragma export( session, login_name );
 
+is_logged_in : session_string := "";
+pragma import( session, is_logged_in );
+pragma export( session, is_logged_in );
 
 -----------------------------------------------------------------------------
 -- Housekeeping
@@ -443,43 +463,50 @@ pragma import( session, login_name );
 -- Functions for specifying and connecting to the content storage.
 -----------------------------------------------------------------------------
 
-procedure cms_open is
+procedure canto_open is
 begin
-  if not files.is_directory( cms_dir ) then
-     raise CONFIG_ERROR with "cms directory does not exist";
+
+  -- Sanity Checks
+
+  if not files.is_directory( canto_data_dir ) then
+     raise CONFIG_ERROR with "data directory does not exist";
   end if;
   -- is_writable is not 100% guaranteed...
-  if not files.is_writable( cms_dir ) then
-     raise CONFIG_ERROR with "cms directory is not writable";
+  if not files.is_writable( canto_data_dir ) then
+     raise CONFIG_ERROR with "data directory is not writable";
   end if;
 
-  cms_initialize_generics;
+  -- Initialize Generics
+
+  canto_initialize_generics;
+
+  -- Open/Create Content File
 
   begin
-    btree_io.open( cms_file, cms_path, cms_max_key_length, cms_max_content_length );
+    btree_io.open( canto_content_file, canto_content_path, canto_max_key_length, canto_max_content_length );
   exception when others =>
-    raise;
-    -- TODO: handle exceptions here
-    --btree_io.create( cms_file, cms_path, cms_max_key_length, cms_max_content_length );
+    btree_io.create( canto_content_file, canto_content_path, canto_max_key_length, canto_max_content_length );
   end;
+
+  -- Open/Create Snippet File
 
   begin
-    btree_io.open( cms_snippet_file, cms_snippet_path, cms_max_key_length, cms_max_content_length );
+    btree_io.open( canto_snippet_file, canto_snippet_path, canto_max_key_length, canto_max_content_length );
   exception when others =>
     -- TODO: handle exceptions here
-    btree_io.create( cms_snippet_file, cms_snippet_path, cms_max_key_length, cms_max_content_length );
+    btree_io.create( canto_snippet_file, canto_snippet_path, canto_max_key_length, canto_max_content_length );
   end;
-end cms_open;
+end canto_open;
 
-procedure cms_close is
+procedure canto_close is
 begin
-  if btree_io.is_open( cms_file ) then
-     btree_io.close( cms_file );
+  if btree_io.is_open( canto_content_file ) then
+     btree_io.close( canto_content_file );
   end if;
   doubly_linked_lists.clear( begin_page_list );
   doubly_linked_lists.clear( end_page_list );
   dynamic_hash_tables.reset( id_table );
-end cms_close;
+end canto_close;
 
 -- VIM editor formatting instructions
 -- vim: ft=spar

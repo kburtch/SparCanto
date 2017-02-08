@@ -1,0 +1,14 @@
+Web Framework
+
+  - get_content (page [, section [, user]] )
+  - set_content( page [, section [, user]][, template] )
+  - get_static_content( file ) - must supply id/class/both
+  - set_static_content( file )
+  - get_content_param( name )
+  - set_content_param( name, value )
+  - login system
+  - content as page content (articles, blogs, comments, etc.)
+
+- base64 encoding (for csrf token)
+  - Cmp. http://www.adapower.com/adapower1/alg/base64.html
+
