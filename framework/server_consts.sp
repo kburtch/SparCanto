@@ -26,10 +26,11 @@ separate;
   pragma import( shell, HTTP_ACCEPT_LANGUAGE );
 
   HTTP_CONNECTION : constant server_string := "";
-  pragma import( shell, HTTP_CONNECTION );
+  pragma unchecked_import( shell, HTTP_CONNECTION );
+  -- HTTP_CONNECTION is with Firefox but not with Lynx browser
 
   HTTP_COOKIE : constant server_string := "";
-  pragma import( shell, HTTP_COOKIE );
+  pragma unchecked_import( shell, HTTP_COOKIE );
 
   HTTP_HOST : constant server_string := "";
   pragma import( shell, HTTP_HOST );

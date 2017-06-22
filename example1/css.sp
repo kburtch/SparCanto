@@ -5,7 +5,7 @@ pragma license( gplv3 );
 
 procedure canto_ex1_css is
   pragma template( css, "templates/canto_ex1_css.tmpl" );
-  with separate "/var/www/html/sparcanto/config/config.sp";
+  with separate "/var/www/html/sparcanto/framework/config/config.sp";
   with separate "/var/www/html/sparcanto/framework/server_consts.sp";
 
   -- Colours

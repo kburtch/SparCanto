@@ -10,9 +10,11 @@ pragma license( gplv3 );
 
 procedure canto_ex1_index is
   pragma template( html, "templates/canto_ex1_index.tmpl" );
-  with separate "/var/www/html/sparcanto/config/config.sp";
-  with separate "/var/www/html/sparcanto/config/team.sp";
+  with separate "/var/www/html/sparcanto/framework/config/config.sp";
+  with separate "/var/www/html/sparcanto/framework/config/team.sp";
   with separate "/var/www/html/sparcanto/framework/server_consts.sp";
+  with separate "/var/www/html/sparcanto/framework/types.sp";
+  with separate "/var/www/html/sparcanto/framework/sessions.sp";
   with separate "/var/www/html/sparcanto/framework/sparcanto.sp";
 begin
    kludge_session := ""; -- kludge: must be written to outside of ``
@@ -27,9 +29,19 @@ begin
      c.tags := "test";
      c.description  := "";
      c.owner        := 1;
-     c.created_on   := calendar.clock;
-     c.published_on := calendar.clock;
-     c.expired_on   := calendar.clock;
+     calendar.split( calendar.clock,
+        c.created_on_year,
+        c.created_on_month,
+        c.created_on_day,
+        c.created_on_seconds );
+     c.published_on_year := c.created_on_year;
+     c.published_on_month := c.created_on_month;
+     c.published_on_day := c.created_on_day;
+     c.published_on_seconds := c.created_on_seconds;
+     c.expired_on_year := c.created_on_year;
+     c.expired_on_month := c.created_on_month;
+     c.expired_on_day := c.created_on_day;
+     c.expired_on_seconds := c.created_on_seconds;
      c.can_cache    := false;
      canto_save_static_content( "ken", c );
    end;

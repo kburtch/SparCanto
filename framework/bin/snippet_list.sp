@@ -9,7 +9,7 @@ pragma license( gplv3 );
 
 procedure snippet_list is
   with separate "../config/config.sp";
-  with separate "../framework/sparcanto.sp";
+  with separate "../sparcanto.sp";
   snippet_cursor : btree_io.cursor;
   key : string;
   snippet : a_snippet;

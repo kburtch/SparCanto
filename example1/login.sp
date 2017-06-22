@@ -10,8 +10,10 @@ pragma license( gplv3 );
 
 procedure canto_ex1_login is
   pragma template( html, "templates/canto_ex1_login.tmpl" );
-  with separate "/var/www/html/sparcanto/config/config.sp";
+  with separate "/var/www/html/sparcanto/framework/config/config.sp";
   with separate "/var/www/html/sparcanto/framework/server_consts.sp";
+  with separate "/var/www/html/sparcanto/framework/types.sp";
+  with separate "/var/www/html/sparcanto/framework/sessions.sp";
   with separate "/var/www/html/sparcanto/framework/sparcanto.sp";
 
   type import_string is new string;

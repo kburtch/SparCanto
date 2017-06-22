@@ -93,7 +93,7 @@ begin
   check_read_directory( "../config/" );
   check_command_directory( "../cron/" );
   check_write_directory( "../data/" );
-  check_read_directory( "../framework/" );
+  check_read_directory( "../" );
   check_command_directory( "../migrations/" );
   check_read_directory( "../projects/" );
   check_read_directory( "../projects/web/" );

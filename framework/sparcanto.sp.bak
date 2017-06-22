@@ -10,7 +10,23 @@ pragma annotate( summary, "SparCanto" )
 --pragma license( unrestricted );
 
 pragma restriction( no_external_commands );
-pragma assert( System.System_Version >= "2.0.3" );
+pragma assert( System.System_Version >= "2.0.1" );
+
+-----------------------------------------------------------------------------
+-- Data Types
+--
+-----------------------------------------------------------------------------
+
+type html_id      is new string;
+--type html_class   is new string;
+type html_content is new string;
+type raw_content  is new string;
+type csrf_token   is new string;
+--type session_string is new string;
+type session_string is new string;
+type cookie_string is new string;
+type user_id      is new integer;
+
 
 type a_content_entry is record
   id           : html_id;       -- html id where it goes
@@ -18,18 +34,9 @@ type a_content_entry is record
   tags         : raw_content;   -- content tags
   description  : raw_content;   -- comments on content
   owner        : user_id;       -- who owns it
-  created_on_year     : calendar.year_number;  -- when was it created
-  created_on_month    : calendar.month_number; -- when was it created
-  created_on_day      : calendar.day_number;   -- when was it created
-  created_on_seconds  : calendar.day_duration; -- when was it created
-  published_on_year   : calendar.year_number;  -- when it should appear
-  published_on_month  : calendar.month_number; -- when it should appear
-  published_on_day    : calendar.day_number;   -- when it should appear
-  published_on_seconds : calendar.day_duration; -- when it should appear
-  expired_on_year     : calendar.year_number;  -- when it is obsolete
-  expired_on_month    : calendar.month_number; -- when it is obsolete
-  expired_on_day      : calendar.day_number;   -- when it is obsolete
-  expired_on_seconds  : calendar.day_duration; -- when it is obsolete
+  created_on   : calendar.time; -- when was it created
+  published_on : calendar.time; -- when it should appear
+  expired_on   : calendar.time; -- when it is obsolete
   can_cache    : boolean;       -- can it be cached
 end record;
 
@@ -74,6 +81,12 @@ type canto_file_type is (btree,local,memcache);
 --cms_max_key_length : constant positive := 80;
 --cms_max_content_length : constant positive := 32768;
 
+mc_session : memcache.memcache_cluster;
+--session_file : btree_io.file;
+--session_path : constant string := "/home/ken/cms/session.btree";
+session_max_key_length : constant positive := 80;
+session_max_content_length : constant positive := 2048;
+
 canto_content_file : btree_io.file( a_content_entry );
 
 --cms_snippet_path : string := "/usr/lib/skiffmouse/cms_snippet.btree";
@@ -93,9 +106,13 @@ id_table : dynamic_hash_tables.table( html_id );
 begin_page_list : doubly_linked_lists.list( raw_content );
 end_page_list   : doubly_linked_lists.list( raw_content );
 
+session_openned : boolean := false;
+
 -----------------------------------------------------------------------------
 -- Cookies
 -----------------------------------------------------------------------------
+
+session_token : cookie_string;
 
 -- KLUDGE: this is here because of a bug in new_file, new_list, new_table
 
@@ -132,6 +149,137 @@ begin
    end if;
    btree_io.set( canto_content_file, key, content );
 end canto_set;
+
+-- Session import/export functions
+--
+-- TODO: these are not complete
+-- TODO: kludge variable should be handled better...
+-- TODO: session duration not implemented
+-- Note: kludge_session is not "written to" only because it is referred to
+--       in the backquoted subscript which is not compiled if it is not run
+--       it is only checked at syntax checking time.
+kludge_session : session_string;
+
+
+-- SESSION_OPEN
+--
+-- Create a new session token (if necessary) and open the session cache.
+-- Store the session token in a cookie.  This is called by the session import
+-- handler.  It assumes the session has not yet been openned.
+------------------------------------------------------------------------------
+
+procedure session_open is
+  s : string;
+begin
+
+  -- Get the session token (or create a new one)
+
+  if session_token = "" then
+     if cgi.cookie_count > 0 then
+        session_token := cookie_string( cgi.cookie_value( "canto_session_token", 1 ) );
+     end if;
+  end if;
+  if session_token = "" then
+       session_token := cookie_string( numerics.sha224_digest_of( strings.image( numerics.rnd( 100000000 ) ) ) );
+       cgi.set_cookie( "canto_session_token", string( session_token ) );
+  end if;
+
+  -- Open the session cache where session data is stored.
+  --
+  -- Since this is run automatically, I chose not to raise a config error
+  -- here...not sure when the exception would be triggered.
+
+  mc_session := memcache.new_cluster;
+  memcache.register_server( mc_session, "localhost", 11211 );
+  s := memcache.version( mc_session );
+  session_openned := s /= "";
+put_line( standard_error, "------------------------------------------------------" ); -- DEBUG
+end session_open;
+
+
+-- CANTO SESSION GET
+--
+-- Get a value from the user's session.  Opens the session if not already
+-- open.  This is the session variable import handler.
+------------------------------------------------------------------------------
+
+procedure canto_session_get( key : string; val : in out session_string ) is
+  full_key : string;
+val2 : string; -- DEBUG
+begin
+  if not session_openned then
+     session_open;
+  end if;
+  put_line( standard_error, "Getting " & key ); -- DEBUG
+  if session_openned then
+     put_line( standard_error, "Session is open" ); -- DEBUG
+  end if;
+  full_key := string( session_token );
+  full_key := @ & "__";
+  full_key := @ & string( key );
+  val := session_string( memcache.get( mc_session, full_key ) );
+put_line( standard_error, "GET: '" & full_key & "' = '" & val & "'" ); -- DEBUG
+val2 := memcache.version( mc_session );
+put_line( standard_error, "Checking memcache: '" & val2 & "'" );
+end canto_session_get;
+
+pragma session_import_script(
+   `kludge_session := session_string( sessions.session_variable_value ); canto_session_get( sessions.session_variable_name, kludge_session );`
+);
+
+
+-- CANTO SESSION SET
+--
+-- Write a value to the user's session.  This is the session variable export
+-- handler.
+------------------------------------------------------------------------------
+
+procedure canto_session_set( key : string; val : session_string ) is
+  full_key : string;
+
+val2 : string; -- DEBUG
+begin
+  if not session_openned then
+     session_open;
+  end if;
+   if key = "" then
+      put_line( standard_error, source_info.source_location & ": key '" & key & "' is empty" );
+      return;
+   end if;
+   full_key := string( session_token );
+   full_key := @ & "__";
+   full_key := @ & string( key );
+   if strings.length( full_key ) > session_max_key_length then
+      put_line( standard_error, source_info.source_location & ": key '" & full_key & "' is too long" );
+      return;
+   elsif not memcache.is_valid_memcache_key( full_key ) then
+      put_line( standard_error, source_info.source_location & ": key '" & full_key & "' has invalid characters" );
+      return;
+   end if;
+  val2 := memcache.version( mc_session );
+put_line( standard_error, "SET: Checking memcache: '" & val2 & "'" );
+put_line( standard_error, "SET: '" & full_key & "' = '" & val & "'" ); -- DEBUG
+   begin
+     memcache.set( mc_session, full_key, string( val ) );
+   exception when others =>
+put_line( standard_error, exceptions.exception_info ); -- DEBUG
+   end;
+  val2 := memcache.version( mc_session );
+put_line( standard_error, "GET CONFIRM (BEFORE): Checking memcache: '" & val2 & "'" );
+put_line( standard_error, "GET CONFIRM..." );
+   begin
+     val2 := memcache.get( mc_session, full_key );
+put_line( standard_error, "GET CONFIRM: '" & full_key & "' = '" & val2 & "'" ); -- DEBUG
+   exception when others =>
+put_line( standard_error, exceptions.exception_info ); -- DEBUG
+   end;
+  val2 := memcache.version( mc_session );
+put_line( standard_error, "GET CONFIRM (AFTER): Checking memcache: '" & val2 & "'" );
+end canto_session_set;
+
+pragma session_export_script(
+   `kludge_session := session_string( sessions.session_variable_value ); canto_session_set( sessions.session_variable_name, kludge_session );`
+);
 
 -----------------------------------------------------------------------------
 -- HTML ID's
